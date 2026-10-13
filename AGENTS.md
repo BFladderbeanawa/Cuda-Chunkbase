@@ -1,13 +1,42 @@
 # AGENTS.md
 
-## Project Goal
+## 项目目标
 
-This project is about to replicate the functionality of [Chunkbase](https://www.chunkbase.com/apps/).
+用户提供 Minecraft 种子，项目利用 NVIDIA GPU 并行计算，搜索该种子整个有效世界范围内的匹配位置，而不是反向寻找种子或只搜索出生点附近。
 
-However, instead of merely repeat its work, this project aims to search for the entire seed world.
+长期目标是覆盖 [Chunkbase](https://www.chunkbase.com/apps/) 的功能并扩展更多搜索能力，同时保持产品聚焦，避免功能和交互臃肿。
 
-Based on the methodology developed by [__Ztalin](https://space.bilibili.com/361188791), the project plan should be feasible in relatively short time.
+## POC 范围与实施顺序
 
-Due to Bilibili's safety policy, LLM cannot fetch its content. Therefore, it is copied in the `docs/` file. Ztalin has provided github of the code to us, so after copied the docs provided by them, we should be able to have a basic try.
+- 固定 Minecraft Java Edition 1.20.1。
+- 先完成主世界史莱姆区块搜索的端到端闭环，再实现主世界和下界的群系搜索。末地不在 POC 范围。
+- 群系搜索接受目标群系，覆盖所选维度的全部有效三维范围，不限于地表或某个固定 Y 高度。
+- 按对应版本、维度和功能确定有效坐标边界；全范围覆盖是硬要求。分批执行可以，有限半径、粗网格抽样或局部扫描不能代替完整搜索。
+- 阶段成果应明确标注已支持的功能和范围；上述两个功能及其全部验收条件完成后，才能宣称 POC 完成。
 
-By the way. I'm not sure that all function of Chunkspace will be suitable for this method. We might need verification.
+## 正确性与结果交付
+
+- 以 Java Edition 1.20.1 的实际规则为准。使用独立参考路径核对结果，覆盖负坐标、坐标边界和有代表性的种子；抽样核对不能表述为已逐点证明全世界正确。
+- 搜索必须完整、无损，结果不得静默截断。允许无损压缩、合并相邻匹配区域等紧凑表示，但必须能精确还原全部匹配位置。
+- 结果流式写入磁盘，不要求一次性驻留内存。结果和进度必须一致地持久化，中断或断电后能继续扫描。
+- 已确认持久化的结果不得丢失或重复；允许重算中断时尚未提交的工作，不承诺每个刚计算出的结果都已落盘。
+
+## GPU 与性能
+
+- 当前只承诺 NVIDIA GPU / CUDA 生态。CPU 可以用于正确性参考，不要求提供同等性能的全世界搜索后端。
+- 根据运行时可用显存自动调整批次或工作集，不把 16GB 显存或特定用户配置作为前提。资源不足时明确报告原因，并保留可恢复成果；不得通过缩小范围、降低精度或截断结果来适配资源。
+- 优先实现完整覆盖、正确性和可恢复性，再依据实测优化。半小时至一小时只是粗略耗时期望，不是 POC 的硬性验收门槛，也不是未经测量的性能承诺。
+- 测量完整扫描和结果落盘的端到端耗时、峰值显存、落盘开销，并记录硬件和软件环境；不得只报告 GPU 内核时间或套用大型多卡设备的成绩。
+
+## 本机网页与验证
+
+- 提供本机运行、浏览器访问的网页，用于提交种子和搜索条件、查看进度，并在可缩放地图上按坐标和高度检查结果。CLI 可以保留，但不能替代网页交付。
+- 网页读取实际搜索产物，支持边搜索边查看，并按视野、缩放和高度渐进式加载展示细节。
+- 展示可以简化，但必须与精确结果明确区分；按坐标及高度检查时提供精确数据。渐进式展示不得改变底层搜索精度或覆盖范围。
+- 验收时实际运行搜索、持久化与恢复流程，并在网页检查结果；视觉检查不能替代独立正确性核对。POC 不要求公网部署、账户或多人服务。
+
+## 参考资料与设计边界
+
+- `docs/` 仅作本地参考，不提交、不上传 GitHub；公开文档、代码注释和其他发布产物不得复制其中正文或图片。保持该目录被 Git 忽略。
+- Ztalin 的工作提供 GPU 搜索思路，史莱姆区块实现的成功不代表方法可直接推广到其他功能。算法和细节优化由项目自行设计，并分别验证正确性和性能。
+- 本文件规定目标、约束和完成标准；具体实现语言、网页框架、存储格式及显存调度算法依据任务和测量结果选择，不在此提前定死。
